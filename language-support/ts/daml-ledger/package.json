@@ -21,6 +21,7 @@
     "@daml/types": "0.0.0-SDKVERSION",
     "@mojotech/json-type-validation": "^3.1.0",
     "cross-fetch": "^3.0.4",
+    "deep-equal": "2.0.3",
     "events": "^3.1.0",
     "isomorphic-ws": "^4.0.1",
     "ws": "^7.2.1"
@@ -32,6 +33,7 @@
     "lint": "eslint --ext .ts --ignore-pattern lib/ --max-warnings 0 ./"
   },
   "devDependencies": {
+    "@types/deep-equal": "1.0.1",
     "@types/jest": "^24.0.23",
     "@types/ws": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^2.16.0",

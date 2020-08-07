@@ -126,7 +126,7 @@ describe('decoders for recursive types do not loop', () => {
 test('create + fetch & exercise', async () => {
   const aliceLedger = new Ledger({token: ALICE_TOKEN, httpBaseUrl: httpBaseUrl()});
   const bobLedger = new Ledger({token: BOB_TOKEN, httpBaseUrl: httpBaseUrl()});
-  const aliceRawStream = aliceLedger.streamQuery(buildAndLint.Main.Person, {party: ALICE_PARTY});
+  const aliceRawStream = aliceLedger.streamQueries(buildAndLint.Main.Person, [{party: ALICE_PARTY}]);
   const aliceStream = promisifyStream(aliceRawStream);
   // TODO(MH): Move this live marker into `promisifyStream`. Unfortunately,
   // it didn't work the straightforward way and we need to spend more time
@@ -194,19 +194,19 @@ test('create + fetch & exercise', async () => {
   expect(personContracts).toEqual([alice6Contract]);
 
   const alice6Key = {...alice5Key, _2: '6'};
-  const alice6KeyRawStream = aliceLedger.streamFetchByKey(buildAndLint.Main.Person, alice6Key)
+  const alice6KeyRawStream = aliceLedger.streamFetchByKeys(buildAndLint.Main.Person, [alice6Key])
   const alice6KeyStream = promisifyStream(alice6KeyRawStream);
   const alice6KeyStreamLive = pEvent(alice6KeyRawStream, 'live');
-  expect(await alice6KeyStream.next()).toEqual([alice6Contract, [{created: alice6Contract}]]);
+  expect(await alice6KeyStream.next()).toEqual([[alice6Contract], [{created: alice6Contract}]]);
 
-  const personRawStream = aliceLedger.streamQuery(buildAndLint.Main.Person);
+  const personRawStream = aliceLedger.streamQueries(buildAndLint.Main.Person, []);
   const personStream = promisifyStream(personRawStream);
   const personStreamLive = pEvent(personRawStream, 'live');
   expect(await personStream.next()).toEqual([[alice6Contract], [{created: alice6Contract}]]);
 
   // end of non-live data, first offset
   expect(await personStreamLive).toEqual([alice6Contract]);
-  expect(await alice6KeyStreamLive).toEqual(alice6Contract);
+  expect(await alice6KeyStreamLive).toEqual([alice6Contract]);
 
   // Bob enters the scene.
   const bob4Contract = await bobLedger.create(buildAndLint.Main.Person, bob4);
@@ -228,7 +228,7 @@ test('create + fetch & exercise', async () => {
   expect(cooper6Contract.payload).toEqual({...alice5, name: 'Alice Cooper', age: '6'});
   expect(cooper6Contract.key).toEqual(alice6Key);
   expect(await aliceStream.next()).toEqual([[cooper6Contract], [{archived: alice6Archived}, {created: cooper6Contract}]]);
-  expect(await alice6KeyStream.next()).toEqual([cooper6Contract, [{archived: alice6Archived}, {created: cooper6Contract}]]);
+  expect(await alice6KeyStream.next()).toEqual([[cooper6Contract], [{archived: alice6Archived}, {created: cooper6Contract}]]);
   expect(await personStream.next()).toEqual([[bob4Contract, cooper6Contract], [{archived: alice6Archived}, {created: cooper6Contract}]]);
 
   personContracts = await aliceLedger.query(buildAndLint.Main.Person);
@@ -238,7 +238,7 @@ test('create + fetch & exercise', async () => {
   const cooper7Archived = await aliceLedger.archiveByKey(buildAndLint.Main.Person, cooper6Contract.key);
   expect(cooper7Archived.contractId).toEqual(cooper6Contract.contractId);
   expect(await aliceStream.next()).toEqual([[], [{archived: cooper7Archived}]]);
-  expect(await alice6KeyStream.next()).toEqual([null, [{archived: cooper7Archived}]]);
+  expect(await alice6KeyStream.next()).toEqual([[null], [{archived: cooper7Archived}]]);
   expect(await personStream.next()).toEqual([[bob4Contract], [{archived: cooper7Archived}]]);
 
   personContracts = await aliceLedger.query(buildAndLint.Main.Person);

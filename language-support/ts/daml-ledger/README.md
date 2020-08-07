@@ -54,10 +54,18 @@ of that template visible for the submitting party are returned.
 
 `streamQuery`
 -------------
-Retrieve a consolidated stream of events for a given template and query. The accumulated state is
-the current set of active contracts matching the query. An event can be a `CreateEvent` or an
-`ArchiveEvent`. When no `query` argument is given, all events visible to the submitting party are
-returned.
+Retrieve a consolidated stream of events for a given template and optional
+query. The accumulated state is the current set of active contracts matching
+the query if one was given; if the function was called without a query
+argument, or the query argument was `undefined`, the accumulated state will
+instead contain all of the active contracts for the given template.
+
+`streamQueries`
+---------------
+Retrieve a consolidated stream of events for a given template and queries. The
+accumulated state is the current set of active contracts matching at least one
+of the given queries, or all contracts for the given template if no query is
+given.
 
 `fetch`
 -------
@@ -69,7 +77,18 @@ Fetch a contract identified by its contract key.
 
 `streamFetchByKey`
 ------------------
-Retrieve a consolidated stream of `CreateEvent`'s for a given template and contract key.
+Retrieve a consolidated stream of `CreateEvent`'s for a given template and
+contract key. The accumulated state is either the `CreateEvent` for the active
+contract matching the given key, or null if there is no currently-active
+contract for the given key.
+
+`streamFetchByKeys`
+-------------------
+Retrieve a consolidated stream of `CreateEvent`'s for a given template and
+contract keys. The accumulated state is a vector of the same length as the
+given vector of keys, where each element is the CreateEvent for the current
+active contract of the corresponding key (element-wise), or null if there is no
+current active contract for that key.
 
 
 ## Source
