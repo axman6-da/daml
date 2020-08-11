@@ -5,7 +5,7 @@ package com.daml.lf.speedy.svalue
 
 import java.util
 
-import com.daml.lf.data.{FrontStack, Numeric, Ref, Time}
+import com.daml.lf.data.{FrontStack, ImmArray, Numeric, Ref, Time}
 import com.daml.lf.language.{Ast, Util => AstUtil}
 import com.daml.lf.speedy.Profile.LabelUnset
 import com.daml.lf.speedy.SValue._
@@ -266,6 +266,18 @@ class EqualitySpec extends WordSpec with Matchers with TableDrivenPropertyChecks
           assert(!Equality.areEqual(eq, nonEq))
       }
     }
+
+    "shortcup list" in {
+      val tail = FrontStack(ImmArray(Iterable.fill(100000)(SBool(true))))
+      val l1 = SList(SBool(true) +: tail)
+      val l2 = SList(SBool(false) +: tail)
+      val timeBefore = System.currentTimeMillis()
+      for (_ <- 1 to 1000)
+        assert(!Equality.areEqual(l1, l2))
+      val timeAfter = System.currentTimeMillis()
+      assert(timeAfter - timeBefore < 1000)
+    }
+
   }
 
   "Hasher.hashCode" should {
