@@ -16,76 +16,79 @@ private[lf] object Equality {
     import SValue._
 
     var success = true
-    var xs = List(Iterator(x))
-    var ys = List(Iterator(y))
+    var stackX = List(Iterator(x))
+    var stackY = List(Iterator(y))
+    // invariant: stackX.length == stackY.length
 
-    while (success && xs.nonEmpty) {
-      // invariant: xs.length == ys.length
+    @inline
+    def push(xs: Iterator[SValue], ys: Iterator[SValue]) = {
+      stackX = xs :: stackX
+      stackY = ys :: stackY
+    }
 
-      if (xs.head.hasNext) {
-        if (ys.head.hasNext) {
-          (xs.head.next(), ys.head.next()) match {
-            case (x: SPrimLit, y: SPrimLit) =>
-              success = x == y
-            case (SEnum(_, _, rank1), SEnum(_, _, rank2)) =>
-              success = rank1 == rank2
-            case (SRecord(_, _, args1), SRecord(_, _, args2)) =>
-              xs = args1.iterator().asScala :: xs
-              ys = args2.iterator().asScala :: ys
-            case (SVariant(_, _, rank1, arg1), SVariant(_, _, rank2, arg2)) =>
-              xs = Iterator(arg1) :: xs
-              ys = Iterator(arg2) :: ys
-              success = rank1 == rank2
-            case (SList(lst1), SList(lst2)) =>
-              xs = lst1.iterator :: xs
-              ys = lst2.iterator :: ys
-            case (SOptional(x1), SOptional(x2)) =>
-              xs = x1.iterator :: xs
-              ys = x2.iterator :: ys
-            case (STextMap(map1), STextMap(map2)) =>
-              val keys1 = map1.keys.toSeq.sorted
-              val keys2 = map2.keys.toSeq.sorted
-              xs = new Interlace(keys1.iterator.map(SText), keys1.iterator.map(map1)) :: xs
-              ys = new Interlace(keys2.iterator.map(SText), keys2.iterator.map(map2)) :: ys
-            case (SGenMap(map1), SGenMap(map2)) =>
-              xs = new Interlace(map1.keys.iterator, map1.values.iterator) :: xs
-              ys = new Interlace(map2.keys.iterator, map2.values.iterator) :: ys
-            case (SStruct(_, args1), SStruct(_, args2)) =>
-              xs = args1.iterator().asScala :: xs
-              ys = args2.iterator().asScala :: ys
-            case (SAny(t1, v1), SAny(t2, v2)) =>
-              xs = Iterator(v1) :: xs
-              ys = Iterator(v2) :: ys
-              success = t1 == t2
-            case (STypeRep(t1), STypeRep(t2)) =>
-              success = t1 == t2
-            case _ =>
-              throw SErrorCrash("try to compare incomparable type")
-          }
-        } else {
-          success = false
-        }
-      } else {
-        if (ys.head.hasNext) {
-          success = false
-        } else {
-          xs = xs.tail
-          ys = ys.tail
-        }
+    @inline
+    def pop() = {
+      stackX = stackX.tail
+      stackY = stackY.tail
+    }
+
+    @inline
+    def compareStep(tuple: (SValue, SValue)) =
+      tuple match {
+        case (x: SPrimLit, y: SPrimLit) =>
+          success = x == y
+        case (SEnum(_, _, xRank), SEnum(_, _, yRank)) =>
+          success = xRank == yRank
+        case (SRecord(_, _, xs), SRecord(_, _, ys)) =>
+          push(xs.iterator().asScala, ys.iterator().asScala)
+        case (SVariant(_, _, xRank, x), SVariant(_, _, yRank, y)) =>
+          push(Iterator(x), Iterator(y))
+          success = xRank == yRank
+        case (SList(xs), SList(ys)) =>
+          push(xs.iterator, ys.iterator)
+        case (SOptional(xOpt), SOptional(yOpt)) =>
+          push(xOpt.iterator, yOpt.iterator)
+        case (STextMap(xMap), STextMap(yMap)) =>
+          val xKeys = xMap.keys.toSeq.sorted
+          val yKeys = yMap.keys.toSeq.sorted
+          push(
+            new Interlace(xKeys.iterator.map(SText), xKeys.iterator.map(xMap)),
+            new Interlace(yKeys.iterator.map(SText), yKeys.iterator.map(yMap)),
+          )
+        case (SGenMap(xMap), SGenMap(yMap)) =>
+          push(
+            new Interlace(xMap.keys.iterator, xMap.values.iterator),
+            new Interlace(yMap.keys.iterator, yMap.values.iterator),
+          )
+        case (SStruct(_, xs), SStruct(_, ys)) =>
+          push(xs.iterator().asScala, ys.iterator().asScala)
+        case (SAny(xType, x), SAny(yType, y)) =>
+          push(Iterator(x), Iterator(y))
+          success = xType == yType
+        case (STypeRep(xType), STypeRep(yType)) =>
+          success = xType == yType
+        case _ =>
+          throw SErrorCrash("try to compare incomparable type")
       }
+
+    while (success && stackX.nonEmpty) {
+      if (stackX.head.hasNext != stackY.head.hasNext)
+        success = false
+      else if (stackX.head.hasNext)
+        compareStep((stackX.head.next(), stackY.head.next()))
+      else
+        pop()
     }
 
     success
-
   }
 
-  // Assumes iterLeft.size == iterRight.size
+  // Assumes iterLeft.size == iterRight.size at initialization
   private[this] class Interlace[X](iterLeft: Iterator[X], iterRight: Iterator[X])
       extends Iterator[X] {
     private[this] var left = true
 
-    override def hasNext: Boolean =
-      if (left) iterLeft.hasNext else iterRight.hasNext
+    override def hasNext: Boolean = iterRight.hasNext
 
     override def next(): X = {
       if (left) {
