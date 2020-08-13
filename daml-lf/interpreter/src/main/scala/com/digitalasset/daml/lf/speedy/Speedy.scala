@@ -146,6 +146,12 @@ private[lf] object Speedy {
       var track: Instrumentation,
       /* Profile of the run when the packages haven been compiled with profiling enabled. */
       var profile: Profile,
+      /* True if we are running on ledger building transactions, false if we
+         are running off-ledger code, e.g., DAML Script or
+         Triggers. It is safe to use on ledger for off ledger code but
+         not the other way around.
+       */
+      val onLedger: Boolean,
   ) {
 
     /* kont manipulation... */
@@ -536,6 +542,7 @@ private[lf] object Speedy {
         committers: Set[Party],
         outputTransactionVersions: VersionRange[transaction.TransactionVersion],
         validating: Boolean = false,
+        onLedger: Boolean = true,
     ): Machine =
       new Machine(
         outputTransactionVersions = outputTransactionVersions,
@@ -560,6 +567,7 @@ private[lf] object Speedy {
         steps = 0,
         track = Instrumentation(),
         profile = new Profile(),
+        onLedger = onLedger,
       )
 
     @throws[PackageNotFound]
@@ -602,6 +610,7 @@ private[lf] object Speedy {
     def fromPureSExpr(
         compiledPackages: CompiledPackages,
         expr: SExpr,
+        onLedger: Boolean = true,
     ): Machine =
       Machine(
         compiledPackages = compiledPackages,
@@ -611,6 +620,7 @@ private[lf] object Speedy {
         globalCids = Set.empty,
         committers = Set.empty,
         outputTransactionVersions = TransactionVersions.SupportedDevOutputVersions,
+        onLedger = onLedger,
       )
 
     @throws[PackageNotFound]
@@ -619,8 +629,9 @@ private[lf] object Speedy {
     def fromPureExpr(
         compiledPackages: CompiledPackages,
         expr: Expr,
+        onLedger: Boolean = true,
     ): Machine =
-      fromPureSExpr(compiledPackages, compiledPackages.compiler.unsafeCompile(expr))
+      fromPureSExpr(compiledPackages, compiledPackages.compiler.unsafeCompile(expr), onLedger)
 
   }
 
