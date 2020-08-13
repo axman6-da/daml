@@ -338,6 +338,10 @@ extlinks = {
     'ledger-api-test-tool-maven': ('https://repo1.maven.org/maven2/com/daml/ledger-api-test-tool/{}/%s-{}.jar'.format(version, version), None)
 }
 
+rst_prolog = """
+.. _installer: https://github.com/digital-asset/daml/releases/download/v{release}/daml-sdk-{release}-windows.exe
+""".format(release = release)
+
 # Import the DAML lexer
 def setup(sphinx):
     from pygments_daml_lexer import DAMLLexer
