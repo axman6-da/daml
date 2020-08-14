@@ -322,3 +322,11 @@ fromAnyContractKey (AnyContractKey any rep)
 
 deriving instance Eq Archive
 deriving instance Show Archive
+
+-- | True if contract exists, fails if current context doesn't have permission to know.
+canSeeContractWithKey : forall t k. (HasLookupByKey t k) => k -> Update Bool
+canSeeContractWithKey k = do
+  m <- lookupByKey @t k
+  case m of
+    Some _ -> return True
+    None -> return False
